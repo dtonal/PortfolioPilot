@@ -1,0 +1,18 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "dtonal",email = "dtonal@posteo.de"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic (>=1.15.2,<2.0.0)",
+    "sqlalchemy (>=2.0.40,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,35 @@
+# Python-spezifisch
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+pyvenv.cfg
+*.egg-info
+.coverage
+.pytest_cache
+nosetests.xml
+doctests.txt
+profile.out
+*.whl
+build
+dist
+
+# Poetry-spezifisch
+poetry.lock
+.venv
+
+# Editor- und IDE-spezifisch
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Betriebssystem-spezifisch
+Thumbs.db
+ehthumbs.db
