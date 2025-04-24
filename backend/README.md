@@ -1,4 +1,4 @@
-# AktienApp - Your Personal Stock Tracking and Analysis Tool
+# PortofolioPilot - Your Personal Stock Tracking and Analysis Tool
 
 ## Overview
 
