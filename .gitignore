@@ -19,6 +19,9 @@ profile.out
 build
 dist
 
+#db
+portfolio.db
+
 # Poetry-spezifisch
 poetry.lock
 .venv
