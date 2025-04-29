@@ -1,4 +1,3 @@
 class AuthService():
     def authenticate(self, user, password_hash) -> bool:
-        #TODO
-        return True
+        return user.password_hash == password_hash
