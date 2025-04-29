@@ -9,7 +9,7 @@ from UserService import UserService
 from portfolio_pilot_backend.models import Base
 
 # Importiere die neue API-Klasse
-from UserAPI import UserAPI
+from user_api import UserAPI
 
 app = Flask(__name__)
 
