@@ -1,15 +1,19 @@
 from typing import Callable
-from db import get_db_session
-def handle_request(func: Callable, *args, **kwargs):
-    """
-    Helper-Methode, um das Session-Handling zu zentralisieren.
-    """
-    db = get_db_session()
-    try:
-        result = func(db, *args, **kwargs)  # Übergibt die Session an die eigentliche Funktion
-        return result
-    except Exception as e:
-        db.rollback()
-        raise e  # Re-raise, damit Flask es handhaben kann
-    finally:
-        db.close()
+
+class RequestHandler():
+    def __init__(self, sessionmaker):
+        self.sessionmaker = sessionmaker
+
+    def handle(self, func: Callable, *args, **kwargs):
+        """
+        Helper-Methode, um das Session-Handling zu zentralisieren.
+        """
+        db = self.sessionmaker()
+        try:
+            result = func(db, *args, **kwargs)  # Übergibt die Session an die eigentliche Funktion
+            return result
+        except Exception as e:
+            db.rollback()
+            raise e  # Re-raise, damit Flask es handhaben kann
+        finally:
+            db.close()

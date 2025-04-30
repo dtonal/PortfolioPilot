@@ -1,10 +1,9 @@
 from flask import Flask, request, jsonify
 from sqlalchemy.orm import Session
-from handle_request import handle_request
 
 
 class UserAPI:
-    def __init__(self, user_service, auth_service):
+    def __init__(self, user_service, auth_service, request_handler):
         """
         Initializes the UserAPI class.
 
@@ -15,6 +14,7 @@ class UserAPI:
         """
         self.user_service = user_service
         self.auth_service = auth_service
+        self.request_handler = request_handler
 
 
     def register_routes(self, app: Flask):
@@ -45,7 +45,7 @@ class UserAPI:
             else:
                 return jsonify({"error": error_msg}), 400
 
-        return handle_request(_create_user)
+        return self.request_handler.handle(_create_user)
 
 
     def get_user(self, user_id: int):
@@ -59,7 +59,7 @@ class UserAPI:
                 return jsonify(user_data), 200
             else:
                 return jsonify({"error": "User not found."}), 404
-        return handle_request(_get_user)
+        return self.request_handler.handle(_get_user)
 
     def get_all_users(self):
         """
@@ -70,7 +70,7 @@ class UserAPI:
             user_list = [{"id": user.id, "username": user.username, "email": user.email} for user in users]
             return jsonify(user_list), 200
 
-        return handle_request(_get_all_users)
+        return self.request_handler.handle(_get_all_users)
 
     def update_user(self, user_id: int):
         """
@@ -89,7 +89,7 @@ class UserAPI:
             else:
                 return jsonify({"error": error_msg}), 404
 
-        return handle_request(_update_user)
+        return self.request_handler.handle(_update_user)
 
     def delete_user(self, user_id: int):
         """
@@ -101,7 +101,7 @@ class UserAPI:
                 return jsonify({"message": "User deleted successfully."}), 200
             else:
                 return jsonify({"error": "User not found."}), 404
-        return handle_request(_delete_user)
+        return self.request_handler.handle(_delete_user)
 
     def login(self):
         """
@@ -122,4 +122,4 @@ class UserAPI:
             else:
                 return jsonify({"error": "Invalid credentials."}), 401
 
-        return handle_request(_login)
+        return self.request_handler.handle(_login)
