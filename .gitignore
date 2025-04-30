@@ -20,7 +20,7 @@ build
 dist
 
 #db
-portfolio.db
+*.db
 
 # Poetry-spezifisch
 poetry.lock
