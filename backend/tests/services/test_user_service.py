@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, make_transient
 
-from UserService import UserService
-from AuthService import AuthService
+from user_service import UserService
+from auth_service import AuthService
 from user_repository import UserRepositoryFactory
 from portfolio_pilot_backend.models import Base, User
 

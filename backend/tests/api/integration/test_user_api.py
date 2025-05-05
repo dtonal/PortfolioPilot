@@ -1,63 +1,55 @@
+import os
 import unittest
-import requests
-import json
-from flask import Flask
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from threading import Thread
-import time
+import tempfile
 
 # Importiere deine bestehenden Module
-from AuthService import AuthService
-from handle_request import RequestHandler
-from portfolio_pilot_backend.repositories.user_repository import UserRepositoryFactory
-from UserService import UserService
+from auth_service import AuthService
 from portfolio_pilot_backend.models import Base
 from portfolio_pilot_backend.models import User  # Importiere das User-Modell
 
 # Importiere die zu testende Klasse und die app-Definition
 from user_api import UserAPI
-from app import app as flask_app
+from app import AppFactory
 
 class UserAPITestCase(unittest.TestCase):
     def setUp(self):
         """Set up for each test."""
-        self.app = flask_app
-        self.client = self.app.test_client()
-        self.base_url = "http://127.0.0.1:5000"  # Standard Flask-Adresse
+        # Konfiguration für die Testumgebung (In-Memory SQLite)
+        self.temp_db_file, self.temp_db_path = tempfile.mkstemp()
+        test_config = {
+            'SQLALCHEMY_DATABASE_URI': f"sqlite:///{self.temp_db_path}",
+            'SQLALCHEMY_TRACK_MODIFICATIONS': False
+        }
+        self.app_factory = AppFactory(config=test_config)
+        self.app = self.app_factory.create_app()
+        self.test_client = self.app.test_client()
 
-        # Konfiguration der Testdatenbank (verwende eine In-Memory SQLite DB für Tests)
-        self.engine = create_engine("sqlite:///:memory:")
-        Base.metadata.create_all(self.engine)
-        self.SessionLocalTest = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        # Erstelle die Datenbanktabellen
+        with self.app.app_context():
+            SessionLocalTest = sessionmaker(autocommit=False, autoflush=False, bind=self.app_factory.engine)
+            self.SessionLocalTest = SessionLocalTest
 
-        # Überschreibe die SessionLocal in der app für die Tests
-        flask_app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///:memory:"
-        global request_handler
-        request_handler = RequestHandler(self.SessionLocalTest)
+            # Initialisiere AuthService für das Erstellen des Testnutzers
+            auth_service = AuthService()
 
-        # Initialisierung der Services mit der Test-DB-Session-Factory
-        auth_service = AuthService()
-        user_repository_factory = UserRepositoryFactory()
-        user_service = UserService(user_repository_factory, auth_service)
+            # Erstelle einen initialen Testnutzer in der Datenbank
+            with self.SessionLocalTest() as db:
+                test_user = User(username="testuser", email="test@example.com",
+                                 password_hash=auth_service.hash_password("testpassword"))
+                db.add(test_user)
+                db.commit()
+                self.test_user_id = test_user.id
 
-        # Initialisierung der UserAPI mit den echten Services und dem Test-RequestHandler
-        self.user_api = UserAPI(user_service, auth_service, request_handler)
-
-        # Erstelle eine neue Flask-App für den Test und registriere die Routen der UserAPI
-        self.test_app = Flask(__name__)
-        self.user_api.register_routes(self.test_app)
-        self.test_client = self.test_app.test_client()
-
+        self.base_url = "http://127.0.0.1:5000"  # Wird jetzt vom Test-Client gehandhabt
         self.user_data = {"username": "newuser", "email": "new@example.com", "password_hash": "securepassword"}
         self.login_data = {"username": "testuser", "password_hash": "testpassword"}
 
-        # Erstelle einen initialen Testnutzer in der Datenbank
-        with self.SessionLocalTest() as db:
-            test_user = User(username="testuser", email="test@example.com", password_hash=auth_service.hash_password("testpassword"))
-            db.add(test_user)
-            db.commit()
-            self.test_user_id = test_user.id
+    def tearDown(self):
+        self.app_factory.engine.dispose()
+        os.close(self.temp_db_file)
+        os.remove(self.temp_db_path)
 
     def test_create_user(self):
         response = self.test_client.post("/users", json=self.user_data)
@@ -157,6 +149,8 @@ class UserAPITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         data = response.get_json()
         self.assertIn("error", data)
+
+
 
 if __name__ == "__main__":
     unittest.main()

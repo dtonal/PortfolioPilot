@@ -1,51 +1,69 @@
 from flask import Flask
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import sessionmaker
 
-# Importiere deine bestehenden Module
-from AuthService import AuthService
+from auth_service import AuthService
 from handle_request import RequestHandler
+from interface_api import IApi
 from portfolio_pilot_backend.repositories.user_repository import UserRepositoryFactory
-from UserService import UserService
+from user_service import UserService
 from portfolio_pilot_backend.models import Base
-
-# Importiere die neue API-Klasse
 from user_api import UserAPI
 
-# Erstellung der Flask-Anwendungsinstanz
-app = Flask(__name__)
+class AppFactory:
+    def __init__(self, config: dict = None):
+        self.config = config if config is not None else self._load_default_config()
+        self.app = self._create_app(config)
+        self.engine = create_engine(self.config['SQLALCHEMY_DATABASE_URI'])
+        session_factory = self._create_session_factory(self.engine)
+        request_handler = self._create_request_handler(session_factory)
+        apis = self._create_apis(request_handler)
+        for api in apis:
+            api.register_routes(self.app)
 
-# Konfiguration der Datenbank (kann auch aus einer separaten Datei oder Umgebungsvariablen kommen)
-# Hier ist eine Standardkonfiguration für SQLite im Dateisystem
-DATABASE_URL = "sqlite:///./app.db"
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Optionale Einstellung
+    def _create_session_factory(self, engine: Engine):
+        Base.metadata.create_all(bind=self.engine)
+        return sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
-# Erstellung des SQLAlchemy Engine
-engine = create_engine(DATABASE_URL)
+    def _create_apis(self, request_handler: RequestHandler) -> list[IApi]:
+        apis = []
+        apis.append(self._create_user_api(request_handler))
+        return apis
 
-# Erstellung einer SessionLocal-Klasse, um Datenbank-Sessions zu erstellen
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    def _create_user_api(self, request_handler: RequestHandler) -> UserAPI:
+        auth_service = self._create_auth_service()
+        user_repository_factory = self._create_user_repository_factory()
+        user_service = self._create_user_service(user_repository_factory, auth_service)
+        return UserAPI(user_service, auth_service, request_handler)
 
-# Initialisierung des RequestHandlers mit der SessionLocal
-request_handler = RequestHandler(SessionLocal)
+    def _load_default_config(self):
+        return {
+            'SQLALCHEMY_DATABASE_URI': "sqlite:///./app.db",
+            'SQLALCHEMY_TRACK_MODIFICATIONS': False
+        }
 
-# Erstelle die Datenbanktabellen, falls sie noch nicht existieren
-Base.metadata.create_all(bind=engine)
+    def _create_app(self, config: dict) -> Flask:
+        app = Flask(__name__)
+        app.config.update(self.config)
+        return app
 
-# Initialisierung von AuthService, UserRepositoryFactory und UserService
-auth_service = AuthService()
-user_repository_factory = UserRepositoryFactory()
-user_service = UserService(user_repository_factory, auth_service)
+    def _create_request_handler(self, session_local):
+        return RequestHandler(session_local)
 
-# Initialisierung der UserAPI-Klasse und Registrierung der Routen
-user_api = UserAPI(user_service, auth_service, request_handler)
-user_api.register_routes(app)
+    def _create_auth_service(self):
+        return AuthService()
 
-# Die Methode test_client() ist Teil des Flask-Frameworks
-# Sie wird an der Flask-Anwendungsinstanz (hier 'app') aufgerufen,
-# um einen Test-Client zu erstellen.
+    def _create_user_repository_factory(self):
+        return UserRepositoryFactory()
+
+    def _create_user_service(self, user_repository_factory, auth_service):
+        return UserService(user_repository_factory, auth_service)
+
+    def create_app(self) -> Flask:
+        return self.app
 
 if __name__ == "__main__":
-    print("app run")
+    app_factory = AppFactory()
+    app = app_factory.create_app()
     app.run(debug=True)
+

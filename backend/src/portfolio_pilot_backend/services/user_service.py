@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session
 
-from AuthService import AuthService
+from auth_service import IAuthService
 from portfolio_pilot_backend.repositories.user_repository import UserRepository, UserRepositoryFactory
 from portfolio_pilot_backend.models import User
 
 class UserService:
-    def __init__(self, user_repository_factory: UserRepositoryFactory, auth_service: AuthService):
+    def __init__(self, user_repository_factory: UserRepositoryFactory, auth_service: IAuthService):
         self.user_repository_factory = user_repository_factory
         self.auth_service = auth_service
 
